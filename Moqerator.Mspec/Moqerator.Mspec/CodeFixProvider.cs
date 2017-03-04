@@ -10,8 +10,11 @@ using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Editing;
+using Microsoft.CodeAnalysis.FindSymbols;
 using Microsoft.CodeAnalysis.Rename;
 using Microsoft.CodeAnalysis.Text;
+using Microsoft.CSharp.RuntimeBinder;
 
 namespace Moqerator.Mspec
 {
@@ -39,6 +42,8 @@ namespace Moqerator.Mspec
             var diagnostic = context.Diagnostics.First();
             var diagnosticSpan = diagnostic.Location.SourceSpan;
 
+            var mockedMethod = root.FindToken(diagnosticSpan.Start).Parent.AncestorsAndSelf().OfType<InvocationExpressionSyntax>().First().ChildNodes().OfType<ArgumentListSyntax>().Single();
+            
             // Find the type declaration identified by the diagnostic.
             var declaration = root.FindToken(diagnosticSpan.Start).Parent.AncestorsAndSelf().OfType<TypeDeclarationSyntax>().First();
 
@@ -46,13 +51,42 @@ namespace Moqerator.Mspec
             context.RegisterCodeFix(
                 CodeAction.Create(
                     title: title,
-                    createChangedSolution: c => MakeUppercaseAsync(context.Document, declaration, c),
+                    createChangedDocument: c => this.CompleteWithItIsAny(context.Document, declaration, c, mockedMethod),
                     equivalenceKey: title),
                 diagnostic);
         }
 
-        private async Task<Solution> MakeUppercaseAsync(Document document, TypeDeclarationSyntax typeDecl, CancellationToken cancellationToken)
+        private async Task<Document> CompleteWithItIsAny(Document document, TypeDeclarationSyntax typeDecl, CancellationToken cancellationToken, ArgumentListSyntax mockedMethod)
         {
+            var mockedMethodDeclaration = SymbolFinder.FindDeclarationsAsync(
+                document.Project,
+                ((IdentifierNameSyntax)((MemberAccessExpressionSyntax)((InvocationExpressionSyntax)mockedMethod.Parent).Expression).Name).Identifier.ValueText,
+                false,
+                cancellationToken).Result;
+            var parameters = ((IMethodSymbol)mockedMethodDeclaration.First()).Parameters;
+            ITypeSymbol firstTypeArgument = parameters.First().Type;
+           
+            var updatedMockedMethod = mockedMethod.AddArguments(SyntaxFactory.Argument(
+                SyntaxFactory.InvocationExpression(
+                    SyntaxFactory.MemberAccessExpression(
+                        SyntaxKind.SimpleMemberAccessExpression,
+                        SyntaxFactory.IdentifierName("It"),
+                        SyntaxFactory.GenericName(
+                            SyntaxFactory.Identifier("IsAny"))
+                        .WithTypeArgumentList(
+                            SyntaxFactory.TypeArgumentList(
+                                SyntaxFactory.SingletonSeparatedList<TypeSyntax>(                                    
+                                    SyntaxFactory.ParseTypeName(firstTypeArgument.ToDisplayString()))))))
+                .NormalizeWhitespace()));
+
+            var syntaxTree = await document.GetSyntaxTreeAsync(cancellationToken);
+
+            var updatedSyntaxTree =
+                syntaxTree.GetRoot().ReplaceNode(mockedMethod, updatedMockedMethod);
+
+            return document.WithSyntaxRoot(updatedSyntaxTree);
+
+            return null;
             // Compute new uppercase name.
             var identifierToken = typeDecl.Identifier;
             var newName = identifierToken.Text.ToUpperInvariant();
@@ -67,7 +101,7 @@ namespace Moqerator.Mspec
             var newSolution = await Renamer.RenameSymbolAsync(document.Project.Solution, typeSymbol, newName, optionSet, cancellationToken).ConfigureAwait(false);
 
             // Return the new solution with the now-uppercase type name.
-            return newSolution;
+            //return newSolution;
         }
     }
 }

@@ -30,22 +30,46 @@ namespace Moqerator.Mspec
         {
             // TODO: Consider registering other actions that act on syntax instead of or in addition to symbols
             // See https://github.com/dotnet/roslyn/blob/master/docs/analyzers/Analyzer%20Actions%20Semantics.md for more information
-            context.RegisterSymbolAction(AnalyzeSymbol, SymbolKind.NamedType);
+            //context.RegisterSymbolAction(AnalyzeSymbol, SymbolKind.Method);
+            context.RegisterSyntaxNodeAction(AnalyzeSyntaxNode, SyntaxKind.InvocationExpression);
         }
 
-        private static void AnalyzeSymbol(SymbolAnalysisContext context)
+        private void AnalyzeSyntaxNode(SyntaxNodeAnalysisContext context)
         {
-            // TODO: Replace the following code with your own analysis, generating Diagnostic objects for any issues you find
-            var namedTypeSymbol = (INamedTypeSymbol)context.Symbol;
-
-            // Find just those named type symbols with names containing lowercase letters.
-            if (namedTypeSymbol.Name.ToCharArray().Any(char.IsLower))
+            if (context.Node.Kind() == SyntaxKind.ArgumentList)
             {
-                // For all such symbols, produce a diagnostic.
-                var diagnostic = Diagnostic.Create(Rule, namedTypeSymbol.Locations[0], namedTypeSymbol.Name);
+                var node = (ArgumentListSyntax)context.Node;
+
+                // handle argument list syntax node.
+
+                var diagnostic = Diagnostic.Create(Rule, node.GetLocation(), node);
 
                 context.ReportDiagnostic(diagnostic);
             }
+            else if (context.Node.Kind() == SyntaxKind.InvocationExpression)
+            {
+                var node = (InvocationExpressionSyntax)context.Node;
+                // handle invocation expression syntax
+                if (node.Parent.Kind() == SyntaxKind.SimpleLambdaExpression &&
+                    node.Parent.Parent.Parent.Kind() == SyntaxKind.ArgumentList &&
+                    node.Parent.Parent.Parent.Parent.ChildNodes().Count() == 2 &&
+                    node.Parent.Parent.Parent.Parent.ChildNodes().First().Kind() == SyntaxKind.SimpleMemberAccessExpression &&
+                    node.Parent.Parent.Parent.Parent.ChildNodes().First().GetLastToken().ValueText == "Setup")
+                {
+                    var diagnostic = Diagnostic.Create(Rule, node.GetLocation(), node);
+
+                    context.ReportDiagnostic(diagnostic);
+                }
+                // if node.Parent.Kind() == SimpleLambdaExpression
+                // if node.Parent.Parent.Parent.Kind() == ArgumentList
+                // if node.Parent.Parent.Parent.Parent.ChildNodes().Count == 2
+                // if node.Parent.Parent.Parent.Parent.ChildNodes().First()
+                // if node.Parent.Parent.Parent.Parent.ChildNodes().First().Kind() == SimpleMemberAccessExpression
+                // node.Parent.Parent.Parent.Parent.ChildNodes().First().GetLastToken().Value == "Setup"
+
+                //if (node.ArgumentList.Arguments.Count == 0 && )
+            }
         }
+
     }
 }
