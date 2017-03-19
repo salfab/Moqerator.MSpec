@@ -21,7 +21,7 @@ namespace Moqerator.Mspec
     [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(MoqeratorMspecCodeFixProvider)), Shared]
     public class MoqeratorMspecCodeFixProvider : CodeFixProvider
     {
-        private const string title = "Make uppercase";
+        private const string title = "Complete missing arguments with It.IsAny<>";
 
         public sealed override ImmutableArray<string> FixableDiagnosticIds
         {
@@ -64,21 +64,41 @@ namespace Moqerator.Mspec
                 false,
                 cancellationToken).Result;
             var parameters = ((IMethodSymbol)mockedMethodDeclaration.First()).Parameters;
-            ITypeSymbol firstTypeArgument = parameters.First().Type;
-           
-            var updatedMockedMethod = mockedMethod.AddArguments(SyntaxFactory.Argument(
-                SyntaxFactory.InvocationExpression(
-                    SyntaxFactory.MemberAccessExpression(
-                        SyntaxKind.SimpleMemberAccessExpression,
-                        SyntaxFactory.IdentifierName("It"),
-                        SyntaxFactory.GenericName(
-                            SyntaxFactory.Identifier("IsAny"))
-                        .WithTypeArgumentList(
-                            SyntaxFactory.TypeArgumentList(
-                                SyntaxFactory.SingletonSeparatedList<TypeSyntax>(                                    
-                                    SyntaxFactory.ParseTypeName(firstTypeArgument.ToDisplayString()))))))
-                .NormalizeWhitespace()));
+            
 
+            var length = parameters.Length;
+
+            SeparatedSyntaxList<ArgumentSyntax> arguments = mockedMethod.Arguments;
+            for (int index = 0; index < length; index++)
+            {
+                var argument = arguments.ElementAtOrDefault(index);
+                var isMissing = argument?.IsMissing ?? true;
+
+                if (isMissing)
+                {
+                    var parameter = parameters[index];
+
+                    if (argument != null)
+                    {
+                        arguments = arguments.RemoveAt(index);
+                    }
+
+                    var argumentSyntax = SyntaxFactory.Argument(
+                        SyntaxFactory.InvocationExpression(
+                            SyntaxFactory.MemberAccessExpression(
+                                SyntaxKind.SimpleMemberAccessExpression,
+                                SyntaxFactory.IdentifierName("It"),
+                                SyntaxFactory.GenericName(SyntaxFactory.Identifier("IsAny"))
+                                    .WithTypeArgumentList(
+                                        SyntaxFactory.TypeArgumentList(
+                                            SyntaxFactory.SingletonSeparatedList(
+                                                SyntaxFactory.ParseTypeName(parameter.ToDisplayString()))))))
+                            .NormalizeWhitespace());
+                    arguments = arguments.Insert(index, argumentSyntax); 
+                    
+                }              
+            }
+            var updatedMockedMethod = mockedMethod.WithArguments(arguments); 
             var syntaxTree = await document.GetSyntaxTreeAsync(cancellationToken);
 
             var updatedSyntaxTree =

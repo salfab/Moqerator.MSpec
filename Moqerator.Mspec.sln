@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Moqerator.Mspec", "Moqerator.Mspec\Moqerator.Mspec\Moqerator.Mspec.csproj", "{F81A10E2-7DFA-4E3C-B096-3550B538B2B7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Moqerator.Mspec", "src\Moqerator.Mspec\Moqerator.Mspec.csproj", "{F81A10E2-7DFA-4E3C-B096-3550B538B2B7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Moqerator.Mspec.Test", "Moqerator.Mspec\Moqerator.Mspec.Test\Moqerator.Mspec.Test.csproj", "{418DAC43-4498-43D9-9FDA-83D7CD7BFCA3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Moqerator.Mspec.Test", "src\Moqerator.Mspec.Test\Moqerator.Mspec.Test.csproj", "{418DAC43-4498-43D9-9FDA-83D7CD7BFCA3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Moqerator.Mspec.Vsix", "Moqerator.Mspec\Moqerator.Mspec.Vsix\Moqerator.Mspec.Vsix.csproj", "{109F06A7-E1B7-419F-9FA1-79C218FD6A32}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Moqerator.Mspec.Vsix", "src\Moqerator.Mspec.Vsix\Moqerator.Mspec.Vsix.csproj", "{109F06A7-E1B7-419F-9FA1-79C218FD6A32}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
