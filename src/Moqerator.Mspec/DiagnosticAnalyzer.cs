@@ -48,14 +48,17 @@ namespace Moqerator.Mspec
             }
             else if (context.Node.Kind() == SyntaxKind.InvocationExpression)
             {
+
                 var node = (InvocationExpressionSyntax)context.Node;
                 // handle invocation expression syntax
                 if (node.Parent.Kind() == SyntaxKind.SimpleLambdaExpression &&
                     node.Parent.Parent.Parent.Kind() == SyntaxKind.ArgumentList &&
                     node.Parent.Parent.Parent.Parent.ChildNodes().Count() == 2 &&
                     node.Parent.Parent.Parent.Parent.ChildNodes().First().Kind() == SyntaxKind.SimpleMemberAccessExpression &&
-                    node.Parent.Parent.Parent.Parent.ChildNodes().First().GetLastToken().ValueText == "Setup")
-                {
+                    node.Parent.Parent.Parent.Parent.ChildNodes().First().GetLastToken().ValueText == "Setup" &&
+                    context.SemanticModel.GetDiagnostics(node.GetLocation().SourceSpan).Any())
+                {                    
+                                              
                     var diagnostic = Diagnostic.Create(Rule, node.GetLocation(), node);
 
                     context.ReportDiagnostic(diagnostic);
